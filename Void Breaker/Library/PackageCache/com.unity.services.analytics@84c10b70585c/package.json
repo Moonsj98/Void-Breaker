@@ -1,0 +1,51 @@
+{
+  "name": "com.unity.services.analytics",
+  "displayName": "Analytics",
+  "version": "6.2.1",
+  "unity": "2022.3",
+  "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.services.core": "1.12.4"
+  },
+  "samples": [
+    {
+      "displayName": "Standard Events",
+      "description": "Example of using the predefined standardized products, including a demo scene",
+      "path": "Samples~/StandardEvents"
+    }
+  ],
+  "_upm": {
+    "gameService": {
+      "genericDashboardUrl": "https://cloud.unity.com/analytics",
+      "projectDashboardUrl": "https://cloud.unity.com/home/organizations/{0}/projects/{1}/environments/default/analytics/v2/about",
+      "projectDashboardUrlType": "OrganizationKeyAndProjectGuid",
+      "configurePath": "Project/Services/Analytics - Gaming Services"
+    },
+    "supportedPlatforms": [
+      "Android",
+      "iOS",
+      "Linux",
+      "Mac",
+      "PC",
+      "Windows 8.1 Universal",
+      "Windows 10 Universal",
+      "WebGL"
+    ],
+    "changelog": "### Fixed\n\n* The SDK now saves unsent events to disk during OnApplicationPause, to prevent data loss if the application is then terminated while minimized"
+  },
+  "relatedPackages": {
+    "com.unity.services.analytics.tests": "6.2.1"
+  },
+  "upmCi": {
+    "footprint": "86757c382e8fde042111a213f4cb2d79e481aedc"
+  },
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.services.analytics@6.2/manual/index.html",
+  "repository": {
+    "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
+    "type": "git",
+    "revision": "9a54aa9e96806d6cedcc83fee9b07ad461652958"
+  },
+  "_fingerprint": "84c10b70585c73bf99f8b72c5ad2f8be49121287"
+}
