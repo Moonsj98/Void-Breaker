@@ -36,8 +36,8 @@ MonoBehaviour:
     fixedBlocks:
     - row: 1
       col: 1
-      blockType: 2
-      hp: 0
+      blockType: 0
+      hp: 50
       debuffStatType: 0
       debuffAmount: 0
     - row: 1
@@ -60,14 +60,14 @@ MonoBehaviour:
       debuffAmount: 0
     - row: 1
       col: 6
-      blockType: 2
-      hp: 0
+      blockType: 0
+      hp: 50
       debuffStatType: 0
       debuffAmount: 0
     - row: 2
       col: 1
-      blockType: 2
-      hp: 0
+      blockType: 0
+      hp: 100
       debuffStatType: 0
       debuffAmount: 0
     - row: 2
@@ -78,8 +78,8 @@ MonoBehaviour:
       debuffAmount: 0
     - row: 2
       col: 6
-      blockType: 2
-      hp: 0
+      blockType: 0
+      hp: 300
       debuffStatType: 0
       debuffAmount: 0
     - row: 3
@@ -126,7 +126,7 @@ MonoBehaviour:
       debuffAmount: 0
     - row: 4
       col: 3
-      blockType: 2
+      blockType: 3
       hp: 100
       debuffStatType: 0
       debuffAmount: 0
@@ -150,8 +150,8 @@ MonoBehaviour:
       debuffAmount: 0
     - row: 5
       col: 6
-      blockType: 2
-      hp: 100
+      blockType: 0
+      hp: 300
       debuffStatType: 0
       debuffAmount: 0
     - row: 6
@@ -162,7 +162,7 @@ MonoBehaviour:
       debuffAmount: 0
     - row: 6
       col: 2
-      blockType: 2
+      blockType: 0
       hp: 300
       debuffStatType: 0
       debuffAmount: 0
@@ -180,12 +180,12 @@ MonoBehaviour:
       debuffAmount: 0
     - row: 6
       col: 5
-      blockType: 0
+      blockType: 2
       hp: 300
       debuffStatType: 0
       debuffAmount: 0
     - row: 6
-      col: 5
+      col: 6
       blockType: 0
       hp: 300
       debuffStatType: 0

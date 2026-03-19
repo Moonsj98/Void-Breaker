@@ -232,7 +232,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!114 &3915920564039744304
 MonoBehaviour:
@@ -248,8 +248,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   RB: {fileID: 473582609166648652}
   isMoving: 0
-  minBounceY: 0.2
-  minSpeed: 0.1
+  stuckCheckInterval: 0.12
+  stuckMoveThreshold: 0.35
+  stuckCollisionThreshold: 4
+  escapeAngleY: 0.35
+  escapeForce: 1700
 --- !u!58 &4688319888331107497
 CircleCollider2D:
   m_ObjectHideFlags: 0
