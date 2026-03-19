@@ -1,0 +1,196 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cec7d4fbf85adc840979ddf34e63104a, type: 3}
+  m_Name: StageData1
+  m_EditorClassIdentifier: 
+  stageId: 1
+  miniStages:
+  - useFixedPattern: 0
+    supportRowCount: 6
+    spawnBuffCard: 1
+    spawnInfiniteBlock: 1
+    infiniteBlockCount: 1
+    fixedBlocks: []
+    gimmicks: []
+  - useFixedPattern: 0
+    supportRowCount: 6
+    spawnBuffCard: 1
+    spawnInfiniteBlock: 1
+    infiniteBlockCount: 1
+    fixedBlocks: []
+    gimmicks: []
+  - useFixedPattern: 1
+    supportRowCount: 6
+    spawnBuffCard: 0
+    spawnInfiniteBlock: 0
+    infiniteBlockCount: 0
+    fixedBlocks:
+    - row: 1
+      col: 1
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 1
+      col: 2
+      blockType: 0
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 1
+      col: 4
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 1
+      col: 5
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 1
+      col: 6
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 2
+      col: 1
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 2
+      col: 4
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 2
+      col: 6
+      blockType: 2
+      hp: 0
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 3
+      col: 1
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 3
+      col: 3
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 3
+      col: 4
+      blockType: 1
+      hp: 1
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 3
+      col: 5
+      blockType: 0
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 3
+      col: 6
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 4
+      col: 1
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 4
+      col: 2
+      blockType: 0
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 4
+      col: 3
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 4
+      col: 4
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 4
+      col: 6
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 5
+      col: 1
+      blockType: 0
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 5
+      col: 6
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 6
+      col: 1
+      blockType: 2
+      hp: 100
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 6
+      col: 2
+      blockType: 2
+      hp: 300
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 6
+      col: 3
+      blockType: 2
+      hp: 300
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 6
+      col: 4
+      blockType: 0
+      hp: 300
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 6
+      col: 5
+      blockType: 0
+      hp: 300
+      debuffStatType: 0
+      debuffAmount: 0
+    - row: 6
+      col: 5
+      blockType: 0
+      hp: 300
+      debuffStatType: 0
+      debuffAmount: 0
+    gimmicks:
+    - triggerType: 0
+      statType: 0
+      amount: 2
