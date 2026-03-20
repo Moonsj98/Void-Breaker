@@ -3,15 +3,24 @@ using UnityEngine;
 
 public class Ball : MonoBehaviour
 {
+    public enum BallType
+    {
+        Normal,
+        Penetrate,
+        Explosive
+    }
+
     public Rigidbody2D RB;
+    public SpriteRenderer spriteRenderer;
     public bool isMoving;
+    public BallType ballType = BallType.Normal;
 
     [Header("Anti-Stuck")]
-    public float stuckCheckInterval = 0.12f;     // 이동량 체크 간격
-    public float stuckMoveThreshold = 0.35f;     // 이 값보다 덜 움직이면 갇힘 후보
-    public int stuckCollisionThreshold = 4;      // 짧은 시간 내 충돌 횟수 기준
-    public float escapeAngleY = 0.35f;           // 탈출 시 추가할 Y 성분
-    public float escapeForce = 1700f;            // 탈출용 보정 힘
+    public float stuckCheckInterval = 0.12f;
+    public float stuckMoveThreshold = 0.35f;
+    public int stuckCollisionThreshold = 4;
+    public float escapeAngleY = 0.35f;
+    public float escapeForce = 1700f;
 
     GameManager GM;
 
@@ -25,6 +34,15 @@ public class Ball : MonoBehaviour
         GM = gameManager;
         isMoving = false;
 
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (RB != null)
+        {
+            RB.linearVelocity = Vector2.zero;
+            RB.angularVelocity = 0f;
+        }
+
         lastCheckPos = transform.position;
         lastCheckTime = Time.time;
         rapidCollisionCount = 0;
@@ -35,6 +53,9 @@ public class Ball : MonoBehaviour
     {
         if (GM == null)
             GM = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
 
         lastCheckPos = transform.position;
         lastCheckTime = Time.time;
@@ -49,7 +70,6 @@ public class Ball : MonoBehaviour
         {
             float movedDist = Vector2.Distance(transform.position, lastCheckPos);
 
-            // 최근 구간 동안 거의 움직이지 않았고, 짧은 시간 내 충돌이 많이 발생했다면 갇힘으로 판단
             if (movedDist < stuckMoveThreshold && rapidCollisionCount >= stuckCollisionThreshold)
             {
                 ApplyEscapeCorrection();
@@ -57,7 +77,6 @@ public class Ball : MonoBehaviour
             }
             else
             {
-                // 충분히 이동했다면 충돌 누적 초기화
                 if (movedDist >= stuckMoveThreshold)
                     rapidCollisionCount = 0;
             }
@@ -65,6 +84,26 @@ public class Ball : MonoBehaviour
             lastCheckPos = transform.position;
             lastCheckTime = Time.time;
         }
+    }
+
+    public void SetBallType(BallType type, Sprite sprite)
+    {
+        ballType = type;
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (spriteRenderer != null && sprite != null)
+            spriteRenderer.sprite = sprite;
+    }
+
+    public void SetVisible(bool visible)
+    {
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = visible;
     }
 
     public void Launch(Vector3 dir)
@@ -79,6 +118,8 @@ public class Ball : MonoBehaviour
             Debug.LogError("Ball.cs의 RB가 연결되지 않았습니다.");
             return;
         }
+
+        SetVisible(true);
 
         rapidCollisionCount = 0;
         lastCollisionTime = -999f;
@@ -112,9 +153,6 @@ public class Ball : MonoBehaviour
 
         CountRapidCollision();
 
-        // 기존 얕은 각도 보정은 제거
-        // 이 부분이 공을 항상 아래쪽으로 다시 밀어 무한 튕김을 악화시킬 수 있었음
-
         if (hitObj.CompareTag("Ground"))
         {
             RB.linearVelocity = Vector2.zero;
@@ -122,7 +160,6 @@ public class Ball : MonoBehaviour
             Vector3 landedPos = new Vector3(col.contacts[0].point.x, GM.groundY, 0f);
             transform.position = landedPos;
 
-            // 이번 턴에 가장 먼저 도착한 공만 다음 발사 위치를 결정
             GM.SetNextLaunchPos(landedPos);
 
             while (true)
@@ -141,13 +178,12 @@ public class Ball : MonoBehaviour
         Block block = hitObj.GetComponent<Block>();
         if (block != null)
         {
-            block.OnHit(GM.attackPower);
+            GM.ProcessBallHit(this, block);
         }
     }
 
     void CountRapidCollision()
     {
-        // 매우 짧은 간격으로 연속 충돌하면 누적
         if (Time.time - lastCollisionTime <= 0.08f)
             rapidCollisionCount++;
         else
@@ -166,7 +202,6 @@ public class Ball : MonoBehaviour
         if (curVel.sqrMagnitude <= 0.001f)
             return;
 
-        // 현재 진행 방향을 최대한 유지하면서 Y를 살짝 추가
         Vector2 dir = curVel.normalized;
 
         float ySign;
@@ -176,8 +211,6 @@ public class Ball : MonoBehaviour
             ySign = (transform.position.y >= 0f) ? 1f : -1f;
 
         Vector2 escapeDir = new Vector2(dir.x, dir.y + (escapeAngleY * ySign)).normalized;
-
-        // 기존 속도를 완전히 바꾸지 않고 아주 살짝만 탈출 보정
         RB.AddForce(escapeDir * escapeForce, ForceMode2D.Impulse);
     }
 }

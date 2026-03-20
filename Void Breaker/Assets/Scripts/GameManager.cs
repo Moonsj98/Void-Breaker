@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor.Overlays;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -21,6 +20,12 @@ public class GameManager : MonoBehaviour
     public Sprite normalBlockSprite;
     public Sprite coreBlockSprite;
     public Sprite infiniteBlockSprite;
+
+    [Header("Ball Sprites")]
+    public Sprite normalBallSprite;
+    public Sprite penetrateBallSprite;
+    public Sprite explosiveBallSprite;
+
 
     [Header("Scene Objects")]
     public GameObject BallPreview;
@@ -100,6 +105,28 @@ public class GameManager : MonoBehaviour
     [Header("Buff UI")]
     public BuffSelectUI buffSelectUI;
 
+    [Header("Ball Type UI")]
+    public Button normalBallButton;
+    public Button penetrateBallButton;
+    public Button explosiveBallButton;
+
+    [Header("Grid")]
+    public int columnCount = 8;
+    public float leftX = -49.3f;
+    public float rightX = 49.3f;
+    public float topY = 51.2f;
+    public float rowGap = 12.8f;
+
+    Ball.BallType selectedBallType = Ball.BallType.Normal;
+    readonly List<Ball.BallType> currentTurnBallTypes = new List<Ball.BallType>();
+    int currentTurnLaunchCount;
+
+    float XGap
+    {
+        get { return (rightX - leftX) / (columnCount - 1); }
+    }
+
+
     public class BuffOption
     {
         public BuffType type;
@@ -146,7 +173,9 @@ public class GameManager : MonoBehaviour
         currentLaunchPos = initialLaunchPos;
         nextLaunchPos = initialLaunchPos;
 
+        SetupBallTypeButtons();
         InitializeBalls();
+        SetSelectedBallType(Ball.BallType.Normal);
 
         UpdateBallCountText();
         UpdateStatInfoText();
@@ -157,7 +186,7 @@ public class GameManager : MonoBehaviour
         if (GameResultPanel != null)
             GameResultPanel.SetActive(false);
 
-        SyncBallPreviewWithBall();
+        SyncBallPreviewWithSelectedBall();
         StageGenerator();
         HideAimObjects();
     }
@@ -233,8 +262,12 @@ public class GameManager : MonoBehaviour
             GameObject ballObj = Instantiate(P_Ball, currentLaunchPos, QI, BallGroup);
             Ball ball = ballObj.GetComponent<Ball>();
             if (ball != null)
+            {
                 ball.Setup(this);
+                ApplyBallTypeToBall(ball, selectedBallType);
+            }
         }
+        RefreshReadyBallDisplay();
     }
 
     public void AddBalls(int count)
@@ -244,7 +277,10 @@ public class GameManager : MonoBehaviour
             GameObject ballObj = Instantiate(P_Ball, currentLaunchPos, QI, BallGroup);
             Ball ball = ballObj.GetComponent<Ball>();
             if (ball != null)
+            {
                 ball.Setup(this);
+                ApplyBallTypeToBall(ball, selectedBallType);
+            }
         }
 
         UpdateBallCountText();
@@ -263,6 +299,7 @@ public class GameManager : MonoBehaviour
                 ball.Setup(this);
         }
 
+        RefreshReadyBallDisplay();
         UpdateBallCountText();
     }
 
@@ -310,28 +347,150 @@ public class GameManager : MonoBehaviour
         return 0.5f;
     }
 
-    void SyncBallPreviewWithBall()
+    void SetupBallTypeButtons()
     {
-        if (P_Ball == null || BallPreview == null)
+        if (normalBallButton != null)
+        {
+            normalBallButton.onClick.RemoveAllListeners();
+            normalBallButton.onClick.AddListener(() => SetSelectedBallType(Ball.BallType.Normal));
+        }
+
+        if (penetrateBallButton != null)
+        {
+            penetrateBallButton.onClick.RemoveAllListeners();
+            penetrateBallButton.onClick.AddListener(() => SetSelectedBallType(Ball.BallType.Penetrate));
+        }
+
+        if (explosiveBallButton != null)
+        {
+            explosiveBallButton.onClick.RemoveAllListeners();
+            explosiveBallButton.onClick.AddListener(() => SetSelectedBallType(Ball.BallType.Explosive));
+        }
+    }
+
+    Sprite GetBallSprite(Ball.BallType type)
+    {
+        switch (type)
+        {
+            case Ball.BallType.Penetrate:
+                return penetrateBallSprite != null ? penetrateBallSprite : normalBallSprite;
+
+            case Ball.BallType.Explosive:
+                return explosiveBallSprite != null ? explosiveBallSprite : normalBallSprite;
+
+            default:
+                return normalBallSprite;
+        }
+    }
+
+    int GetBallCost(Ball.BallType type)
+    {
+        return type == Ball.BallType.Normal ? 1 : 2;
+    }
+
+    public void SetSelectedBallType(Ball.BallType type)
+    {
+        selectedBallType = type;
+        SyncBallPreviewWithSelectedBall();
+        RefreshReadyBallDisplay();
+        RefreshBallTypeButtonState();
+    }
+
+    void RefreshBallTypeButtonState()
+    {
+        Color selectedColor = Color.white;
+        Color unselectedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+
+        if (normalBallButton != null && normalBallButton.image != null)
+            normalBallButton.image.color = selectedBallType == Ball.BallType.Normal ? selectedColor : unselectedColor;
+
+        if (penetrateBallButton != null && penetrateBallButton.image != null)
+            penetrateBallButton.image.color = selectedBallType == Ball.BallType.Penetrate ? selectedColor : unselectedColor;
+
+        if (explosiveBallButton != null && explosiveBallButton.image != null)
+            explosiveBallButton.image.color = selectedBallType == Ball.BallType.Explosive ? selectedColor : unselectedColor;
+    }
+
+    void RefreshIdleBallVisuals()
+    {
+        Sprite sprite = GetBallSprite(selectedBallType);
+
+        for (int i = 0; i < BallGroup.childCount; i++)
+        {
+            Ball ball = BallGroup.GetChild(i).GetComponent<Ball>();
+            if (ball == null) continue;
+            if (ball.isMoving) continue;
+
+            ball.SetBallType(selectedBallType, sprite);
+        }
+    }
+
+    void ApplyBallTypeToBall(Ball ball, Ball.BallType type)
+    {
+        if (ball == null) return;
+        ball.SetBallType(type, GetBallSprite(type));
+    }
+
+    void RefreshReadyBallDisplay()
+    {
+        for (int i = 0; i < BallGroup.childCount; i++)
+        {
+            Ball ball = BallGroup.GetChild(i).GetComponent<Ball>();
+            if (ball == null) continue;
+
+            ball.StopBall();
+            ball.transform.position = currentLaunchPos;
+
+            // 발사 준비 상태에서는 첫 번째 공만 보이게
+            bool shouldShow = (i == 0);
+            ball.SetVisible(shouldShow);
+
+            if (shouldShow)
+                ApplyBallTypeToBall(ball, selectedBallType);
+        }
+    }
+
+    void SyncBallPreviewWithSelectedBall()
+    {
+        if (BallPreview == null)
             return;
 
-        SpriteRenderer ballSR = P_Ball.GetComponent<SpriteRenderer>();
         SpriteRenderer previewSR = BallPreview.GetComponent<SpriteRenderer>();
-
         if (previewSR == null)
             return;
 
-        if (ballSR != null)
-        {
-            previewSR.sprite = ballSR.sprite;
-            previewSR.color = Color.white;
-            previewSR.flipX = ballSR.flipX;
-            previewSR.flipY = ballSR.flipY;
-        }
-
+        previewSR.sprite = GetBallSprite(selectedBallType);
+        previewSR.color = Color.white;
         previewSR.sortingLayerName = "Default";
         previewSR.sortingOrder = 999;
-        BallPreview.transform.localScale = P_Ball.transform.localScale;
+
+        if (P_Ball != null)
+            BallPreview.transform.localScale = P_Ball.transform.localScale;
+    }
+
+    void BuildCurrentTurnBallPlan()
+    {
+        currentTurnBallTypes.Clear();
+
+        int remainCost = cost;
+
+        while (remainCost > 0)
+        {
+            int selectedCost = GetBallCost(selectedBallType);
+
+            if (selectedBallType != Ball.BallType.Normal && remainCost >= selectedCost)
+            {
+                currentTurnBallTypes.Add(selectedBallType);
+                remainCost -= selectedCost;
+            }
+            else
+            {
+                currentTurnBallTypes.Add(Ball.BallType.Normal);
+                remainCost -= 1;
+            }
+        }
+
+        currentTurnLaunchCount = currentTurnBallTypes.Count;
     }
 
     public void SetNextLaunchPos(Vector3 pos)
@@ -405,17 +564,10 @@ public class GameManager : MonoBehaviour
 
     void GenerateRandomMiniStage(int rowCount, bool allowBuffCard, bool allowInfiniteBlock, int randomInfiniteBlockCount)
     {
-        int columnCount = 8;
-        float leftX = -49.3f;
-        float rightX = 49.3f;
-        float topY = 51.2f;
-        float rowGap = 12.8f;
-        float xGap = (rightX - leftX) / (columnCount - 1);
-
         bool[,] occupied = new bool[rowCount + 1, columnCount];
 
         int coreIndex = Random.Range(1, columnCount - 1);
-        Vector3 corePos = new Vector3(leftX + coreIndex * xGap, topY, 0f);
+        Vector3 corePos = new Vector3(leftX + coreIndex * XGap, topY, 0f);
         CreateCoreBlock(corePos);
 
         for (int row = 1; row <= rowCount; row++)
@@ -429,7 +581,7 @@ public class GameManager : MonoBehaviour
 
             foreach (int col in usedCols)
             {
-                float x = leftX + col * xGap;
+                float x = leftX + col * XGap;
                 Vector3 spawnPos = new Vector3(x, y, 0f);
 
                 int hp = Random.Range(cost - 3, cost + 4);
@@ -456,7 +608,7 @@ public class GameManager : MonoBehaviour
             Vector2Int slot = emptySlots[idx];
             emptySlots.RemoveAt(idx);
 
-            Vector3 pos = new Vector3(leftX + slot.y * xGap, topY - (rowGap * slot.x), 0f);
+            Vector3 pos = new Vector3(leftX + slot.y * XGap, topY - (rowGap * slot.x), 0f);
             CreateBuffCardBlock(pos);
         }
 
@@ -470,7 +622,7 @@ public class GameManager : MonoBehaviour
                 Vector2Int slot = emptySlots[idx];
                 emptySlots.RemoveAt(idx);
 
-                Vector3 pos = new Vector3(leftX + slot.y * xGap, topY - (rowGap * slot.x), 0f);
+                Vector3 pos = new Vector3(leftX + slot.y * XGap, topY - (rowGap * slot.x), 0f);
                 CreateInfiniteBlock(pos);
             }
         }
@@ -491,17 +643,10 @@ public class GameManager : MonoBehaviour
 
     Vector3 GetGridWorldPosition(int row, int col)
     {
-        int columnCount = 8;
-        float leftX = -49.3f;
-        float rightX = 49.3f;
-        float topY = 51.2f;
-        float rowGap = 12.8f;
-        float xGap = (rightX - leftX) / (columnCount - 1);
-
         col = Mathf.Clamp(col, 0, columnCount - 1);
         row = Mathf.Max(0, row);
 
-        return new Vector3(leftX + col * xGap, topY - rowGap * row, 0f);
+        return new Vector3(leftX + col * XGap, topY - rowGap * row, 0f);
     }
 
     void CreateBlockFromData(Vector3 pos, StageBlockData data)
@@ -580,6 +725,66 @@ public class GameManager : MonoBehaviour
         Block block = obj.GetComponent<Block>();
         if (block != null)
             block.SetupDebuff(this, hp, statType, amount);
+    }
+
+    public void ProcessBallHit(Ball ball, Block hitBlock)
+    {
+        if (ball == null || hitBlock == null)
+            return;
+
+        DealDamage(hitBlock);
+
+        switch (ball.ballType)
+        {
+            case Ball.BallType.Penetrate:
+                {
+                    Block upperBlock = FindAdjacentBlock(hitBlock, 0, 1);
+                    if (upperBlock != null && upperBlock != hitBlock)
+                        DealDamage(upperBlock);
+                    break;
+                }
+
+            case Ball.BallType.Explosive:
+                {
+                    Block leftBlock = FindAdjacentBlock(hitBlock, -1, 0);
+                    Block rightBlock = FindAdjacentBlock(hitBlock, 1, 0);
+
+                    if (leftBlock != null && leftBlock != hitBlock)
+                        DealDamage(leftBlock);
+
+                    if (rightBlock != null && rightBlock != hitBlock)
+                        DealDamage(rightBlock);
+                    break;
+                }
+        }
+    }
+
+    void DealDamage(Block block)
+    {
+        if (block == null) return;
+        block.OnHit(attackPower);
+    }
+
+    Block FindAdjacentBlock(Block origin, int colOffset, int rowOffset)
+    {
+        if (origin == null) return null;
+
+        Vector3 targetPos = origin.transform.position + new Vector3(colOffset * XGap, rowOffset * rowGap, 0f);
+        return FindBlockAtPosition(targetPos, 0.4f);
+    }
+
+    Block FindBlockAtPosition(Vector3 targetPos, float tolerance)
+    {
+        for (int i = 0; i < BlockGroup.childCount; i++)
+        {
+            Block block = BlockGroup.GetChild(i).GetComponent<Block>();
+            if (block == null) continue;
+
+            if (Vector2.Distance(block.transform.position, targetPos) <= tolerance)
+                return block;
+        }
+
+        return null;
     }
 
     void ApplyGimmicks(MiniStageData data, StageGimmickTriggerType triggerType)
@@ -791,6 +996,8 @@ public class GameManager : MonoBehaviour
         shotTrigger = false;
         shotable = true;
         firstBallLandedThisTurn = false;
+        currentTurnLaunchCount = 0;
+        currentTurnBallTypes.Clear();
 
         RebuildBallsToMatchCost();
 
@@ -803,13 +1010,16 @@ public class GameManager : MonoBehaviour
             {
                 ball.StopBall();
                 ball.Setup(this);
+                ApplyBallTypeToBall(ball, selectedBallType);
             }
 
             ballTr.position = currentLaunchPos;
         }
 
+        SyncBallPreviewWithSelectedBall();
+        RefreshReadyBallDisplay();
         HideAimObjects();
-        UpdateStatInfoText();
+        UpdateStatInfoText(); ;
     }
 
     Vector3 GetAimEndPoint(Vector3 origin, Vector3 dir)
@@ -856,7 +1066,10 @@ public class GameManager : MonoBehaviour
         }
 
         if (shotable)
+        {
             currentLaunchPos = nextLaunchPos;
+            RefreshReadyBallDisplay();
+        }
 
         if (shotTrigger && shotable)
         {
@@ -894,7 +1107,7 @@ public class GameManager : MonoBehaviour
                     gap.y = 0.2f;
 
                 gap = gap.normalized;
-                SyncBallPreviewWithBall();
+                SyncBallPreviewWithSelectedBall();
                 Vector3 aimEndPos = GetAimEndPoint(currentLaunchPos, gap);
 
                 if (Arrow != null)
@@ -920,7 +1133,7 @@ public class GameManager : MonoBehaviour
 
                 if (BallPreview != null)
                 {
-                    SyncBallPreviewWithBall();
+                    SyncBallPreviewWithSelectedBall();
                     BallPreview.transform.position = new Vector3(aimEndPos.x, aimEndPos.y, -1f);
                     BallPreview.transform.rotation = Quaternion.identity;
                     BallPreview.SetActive(true);
@@ -953,6 +1166,8 @@ public class GameManager : MonoBehaviour
                 timerStart = true;
                 timerCount = 0;
                 launchIndex = 0;
+
+                BuildCurrentTurnBallPlan();
 
                 firstBallLandedThisTurn = false;
                 nextLaunchPos = currentLaunchPos;
@@ -987,16 +1202,21 @@ public class GameManager : MonoBehaviour
         {
             timerCount = 0;
 
-            if (launchIndex < BallGroup.childCount)
+            if (launchIndex < currentTurnLaunchCount)
             {
                 Ball ball = BallGroup.GetChild(launchIndex).GetComponent<Ball>();
                 if (ball != null)
+                {
+                    ApplyBallTypeToBall(ball, currentTurnBallTypes[launchIndex]);
+                    ball.transform.position = currentLaunchPos;
+                    ball.SetVisible(true);
                     ball.Launch(gap);
+                }
 
                 launchIndex++;
             }
 
-            if (launchIndex >= BallGroup.childCount)
+            if (launchIndex >= currentTurnLaunchCount)
             {
                 timerStart = false;
                 launchIndex = 0;
