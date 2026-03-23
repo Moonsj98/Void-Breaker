@@ -93,12 +93,15 @@ public class GameManager : MonoBehaviour
     int launchIndex;
     int remainShotCount;
     int currentMiniStage = 1;
+    int pendingCostDelta = 0;
+    float shotElapsedTime;
 
     bool timerStart;
     bool isDie;
     bool isStageClear;
     bool isBuffSelecting;
     bool firstBallLandedThisTurn;
+    bool hasAnyBallReturnedThisTurn;
 
     readonly Quaternion QI = Quaternion.identity;
 
@@ -109,6 +112,10 @@ public class GameManager : MonoBehaviour
     public Button normalBallButton;
     public Button penetrateBallButton;
     public Button explosiveBallButton;
+
+    [Header("Recall UI")]
+    public Button recallButton;
+    public float recallEnableDelay = 20f;
 
     [Header("Grid")]
     public int columnCount = 8;
@@ -174,6 +181,7 @@ public class GameManager : MonoBehaviour
         nextLaunchPos = initialLaunchPos;
 
         SetupBallTypeButtons();
+        SetupRecallButton();
         InitializeBalls();
         SetSelectedBallType(Ball.BallType.Normal);
 
@@ -189,6 +197,7 @@ public class GameManager : MonoBehaviour
         SyncBallPreviewWithSelectedBall();
         StageGenerator();
         HideAimObjects();
+        RefreshRecallButtonState();
     }
 
     void Update()
@@ -308,8 +317,15 @@ public class GameManager : MonoBehaviour
         switch (statType)
         {
             case StatType.Cost:
-                cost = Mathf.Max(1, cost + amount);
-                RebuildBallsToMatchCost();
+                if (!shotable || timerStart)
+                {
+                    pendingCostDelta += amount;
+                }
+                else
+                {
+                    cost = Mathf.Max(1, cost + amount);
+                    RebuildBallsToMatchCost();
+                }
                 break;
 
             case StatType.AttackPower:
@@ -322,6 +338,19 @@ public class GameManager : MonoBehaviour
                 break;
         }
 
+        UpdateStatInfoText();
+        BlockColorRefresh();
+    }
+
+    void ApplyPendingCostChangeIfNeeded()
+    {
+        if (pendingCostDelta == 0)
+            return;
+
+        cost = Mathf.Max(1, cost + pendingCostDelta);
+        pendingCostDelta = 0;
+
+        RebuildBallsToMatchCost();
         UpdateStatInfoText();
         BlockColorRefresh();
     }
@@ -368,6 +397,47 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void SetupRecallButton()
+    {
+        if (recallButton == null)
+            return;
+
+        recallButton.onClick.RemoveAllListeners();
+        recallButton.onClick.AddListener(RecallAllBalls);
+    }
+
+    bool CanUseRecall()
+    {
+        if (recallButton == null)
+            return false;
+
+        if (isDie || isStageClear || isBuffSelecting)
+            return false;
+
+        // 발사 중이 아니면 회수할 필요 없음
+        if (shotable && !timerStart)
+            return false;
+
+        // 1개 이상 돌아왔거나, 발사 후 20초 초과 시 활성화
+        return hasAnyBallReturnedThisTurn || shotElapsedTime >= recallEnableDelay;
+    }
+    void RefreshRecallButtonState()
+    {
+        if (recallButton == null)
+            return;
+
+        bool canUse = CanUseRecall();
+        recallButton.interactable = canUse;
+
+        if (recallButton.image != null)
+        {
+            recallButton.image.color = canUse
+                ? Color.white
+                : new Color(0.35f, 0.35f, 0.35f, 0.85f);
+        }
+    }
+
+
     Sprite GetBallSprite(Ball.BallType type)
     {
         switch (type)
@@ -387,9 +457,23 @@ public class GameManager : MonoBehaviour
     {
         return type == Ball.BallType.Normal ? 1 : 2;
     }
+    bool CanChangeBallType()
+    {
+        if (isDie || isStageClear || isBuffSelecting)
+            return false;
+
+        // 발사 예약 중이거나 실제로 공이 움직이는 중이면 변경 불가
+        if (timerStart || !shotable)
+            return false;
+
+        return true;
+    }
 
     public void SetSelectedBallType(Ball.BallType type)
     {
+        if (!CanChangeBallType())
+            return;
+
         selectedBallType = type;
         SyncBallPreviewWithSelectedBall();
         RefreshReadyBallDisplay();
@@ -398,17 +482,31 @@ public class GameManager : MonoBehaviour
 
     void RefreshBallTypeButtonState()
     {
+        bool canChange = CanChangeBallType();
+
         Color selectedColor = Color.white;
         Color unselectedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+        Color disabledColor = new Color(0.35f, 0.35f, 0.35f, 0.85f);
 
-        if (normalBallButton != null && normalBallButton.image != null)
-            normalBallButton.image.color = selectedBallType == Ball.BallType.Normal ? selectedColor : unselectedColor;
+        RefreshSingleBallTypeButton(normalBallButton, selectedBallType == Ball.BallType.Normal, canChange, selectedColor, unselectedColor, disabledColor);
+        RefreshSingleBallTypeButton(penetrateBallButton, selectedBallType == Ball.BallType.Penetrate, canChange, selectedColor, unselectedColor, disabledColor);
+        RefreshSingleBallTypeButton(explosiveBallButton, selectedBallType == Ball.BallType.Explosive, canChange, selectedColor, unselectedColor, disabledColor);
+    }
 
-        if (penetrateBallButton != null && penetrateBallButton.image != null)
-            penetrateBallButton.image.color = selectedBallType == Ball.BallType.Penetrate ? selectedColor : unselectedColor;
+    void RefreshSingleBallTypeButton(Button button, bool isSelected, bool canChange, Color selectedColor, Color unselectedColor, Color disabledColor)
+    {
+        if (button == null)
+            return;
 
-        if (explosiveBallButton != null && explosiveBallButton.image != null)
-            explosiveBallButton.image.color = selectedBallType == Ball.BallType.Explosive ? selectedColor : unselectedColor;
+        button.interactable = canChange;
+
+        if (button.image == null)
+            return;
+
+        if (!canChange)
+            button.image.color = disabledColor;
+        else
+            button.image.color = isSelected ? selectedColor : unselectedColor;
     }
 
     void RefreshIdleBallVisuals()
@@ -495,6 +593,8 @@ public class GameManager : MonoBehaviour
 
     public void SetNextLaunchPos(Vector3 pos)
     {
+        hasAnyBallReturnedThisTurn = true;
+
         if (firstBallLandedThisTurn) return;
 
         firstBallLandedThisTurn = true;
@@ -732,6 +832,7 @@ public class GameManager : MonoBehaviour
         if (ball == null || hitBlock == null)
             return;
 
+        // 직접 맞은 블록은 기존대로 처리
         DealDamage(hitBlock);
 
         switch (ball.ballType)
@@ -740,7 +841,7 @@ public class GameManager : MonoBehaviour
                 {
                     Block upperBlock = FindAdjacentBlock(hitBlock, 0, 1);
                     if (upperBlock != null && upperBlock != hitBlock)
-                        DealDamage(upperBlock);
+                        DealSplashDamage(upperBlock);
                     break;
                 }
 
@@ -750,10 +851,10 @@ public class GameManager : MonoBehaviour
                     Block rightBlock = FindAdjacentBlock(hitBlock, 1, 0);
 
                     if (leftBlock != null && leftBlock != hitBlock)
-                        DealDamage(leftBlock);
+                        DealSplashDamage(leftBlock);
 
                     if (rightBlock != null && rightBlock != hitBlock)
-                        DealDamage(rightBlock);
+                        DealSplashDamage(rightBlock);
                     break;
                 }
         }
@@ -762,6 +863,19 @@ public class GameManager : MonoBehaviour
     void DealDamage(Block block)
     {
         if (block == null) return;
+        block.OnHit(attackPower);
+    }
+
+    void DealSplashDamage(Block block)
+    {
+        if (block == null)
+            return;
+
+        // 스플래시 데미지로는 코어 블록과 버프 카드 블록에 반응하지 않음
+        if (block.blockType == Block.BlockType.Core ||
+            block.blockType == Block.BlockType.BuffCard)
+            return;
+
         block.OnHit(attackPower);
     }
 
@@ -996,6 +1110,8 @@ public class GameManager : MonoBehaviour
         shotTrigger = false;
         shotable = true;
         firstBallLandedThisTurn = false;
+        hasAnyBallReturnedThisTurn = false;
+        shotElapsedTime = 0f;
         currentTurnLaunchCount = 0;
         currentTurnBallTypes.Clear();
 
@@ -1020,6 +1136,7 @@ public class GameManager : MonoBehaviour
         RefreshReadyBallDisplay();
         HideAimObjects();
         UpdateStatInfoText(); ;
+        RefreshRecallButtonState();
     }
 
     Vector3 GetAimEndPoint(Vector3 origin, Vector3 dir)
@@ -1065,11 +1182,27 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        RefreshBallTypeButtonState();
+
+
+        if (!shotable || timerStart)
+            shotElapsedTime += Time.deltaTime;
+        else
+            shotElapsedTime = 0f;
+
+
         if (shotable)
         {
             currentLaunchPos = nextLaunchPos;
-            RefreshReadyBallDisplay();
+
+            bool hadPendingCostChange = pendingCostDelta != 0; 
+            ApplyPendingCostChangeIfNeeded();  
+            
+            if (!hadPendingCostChange)
+                RefreshReadyBallDisplay();
+            hasAnyBallReturnedThisTurn = false;
         }
+        RefreshRecallButtonState();
 
         if (shotTrigger && shotable)
         {
@@ -1170,7 +1303,11 @@ public class GameManager : MonoBehaviour
                 BuildCurrentTurnBallPlan();
 
                 firstBallLandedThisTurn = false;
+                hasAnyBallReturnedThisTurn = false;
+                shotElapsedTime = 0f;
                 nextLaunchPos = currentLaunchPos;
+
+                RefreshRecallButtonState();
 
                 remainShotCount--;
                 UpdateRemainShotText();
@@ -1222,5 +1359,35 @@ public class GameManager : MonoBehaviour
                 launchIndex = 0;
             }
         }
+    }
+    public void RecallAllBalls()
+    {
+        if (!CanUseRecall())
+            return;
+
+        bool noBallReturnedYet = !hasAnyBallReturnedThisTurn;
+
+        timerStart = false;
+        shotTrigger = false;
+        launchIndex = 0;
+        currentTurnLaunchCount = 0;
+        currentTurnBallTypes.Clear();
+
+        StopAllBalls();
+
+        // 아직 한 개도 돌아오지 않은 상태에서 20초 초과로 회수한 경우
+        // 다음 발사 위치는 기존 발사 지점 유지
+        if (noBallReturnedYet)
+            nextLaunchPos = currentLaunchPos;
+
+        currentLaunchPos = nextLaunchPos;
+        firstBallLandedThisTurn = false;
+        hasAnyBallReturnedThisTurn = false;
+        shotElapsedTime = 0f;
+        shotable = true;
+
+        RefreshReadyBallDisplay();
+        HideAimObjects();
+        RefreshRecallButtonState();
     }
 }
